@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -9,8 +9,8 @@ namespace NiuMa
 {
     public class AppSettings
     {
-        public string AppName = "牛马脱敏器";
-        public int SalaryMode = 0;          // 0 日薪, 1 月薪
+        public string AppName = "燃脂助手";
+        public int SalaryMode = 0;          // 0 每日, 1 每月
         public double Amount = 100;
         public double MonthDays = 21.75;
         public string StartTime = "10:00";
@@ -20,7 +20,7 @@ namespace NiuMa
         public string LunchEnd = "13:00";
         public string WorkDays = "1,2,3,4,5"; // 0=周日
         public int Decimals = 5;
-        public string Currency = "¥";
+        public string Currency = "卡路里";
         public double BgOpacity = 1.0;
         public double PanelOpacity = 0.55;
         public double WindowOpacity = 1.0;
@@ -38,9 +38,9 @@ namespace NiuMa
         public double Left = double.NaN;
         public double Top = double.NaN;
         public string OverrideDate = "";
-        public int OverrideMode = 0;        // 0 正常, 1 今天休息, 2 今天上班
-        public string Wishlist = "一瓶可乐=3\n一个煎饼果子=8\n一杯奶茶=15\n一份猪脚饭=22\n一杯咖啡=30\n一张电影票=45\n一件T恤=79\n一顿火锅=120\n一双球鞋=399";
-        public string Quotes = "摸鱼不是偷懒，是在给老板省电。\n工资不多，但每一秒都在到账。\n上班是为了下班，下班是为了明天还能上班。\n今天的你，又为老板的新车贡献了一个轮毂。\n别慌，钱在路上，人在工位。\n带薪如厕，是打工人最后的倔强。\n只要我不努力，老板就过不上他想要的生活。\n工作是老板的，命是自己的。\n再坚持一下，离下班又近了一秒。\n今日份的牛马已上线，正在稳定产出。";
+        public int OverrideMode = 0;        // 0 正常, 1 今天休息, 2 今天照常
+        public string Wishlist = "一杯美式=3\n一个苹果=8\n一份沙拉=15\n一节拉伸=22\n一次慢跑=30\n一场球=45\n一次游泳=79\n一节私教=120\n一双跑鞋=399";
+        public string Quotes = "卡路里不会说谎，烧掉就是烧掉。\n每一秒都在消耗，别停。\n今天多燃一点，明天就轻一点。\n数字在涨，说明你没闲着。\n燃烧这件事，会上瘾。\n慢没关系，别断。\n每一克，都在被数字说服。\n今天的额度，用满才算完整。\n不动的时候，数字也停着。\n再坚持一会儿，就到收尾了。";
 
         public static string Dir
         {

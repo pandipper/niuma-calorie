@@ -184,7 +184,11 @@ namespace NiuMa
         {
             _root = new Border
             {
-                CornerRadius = new CornerRadius(16), Background = Ui.B("#F3ECD3"),
+                CornerRadius = new CornerRadius(16),
+                // 不再内置任何背景图片：默认就是一块干净的暖色渐变底，要图可以自己在设置里选
+                Background = new LinearGradientBrush(
+                    (Color)ColorConverter.ConvertFromString("#FDF9EC"),
+                    (Color)ColorConverter.ConvertFromString("#EFE4C6"), 90),
                 BorderBrush = Ui.B("#40000000"), BorderThickness = new Thickness(1), Margin = new Thickness(12),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 16, ShadowDepth = 3, Opacity = 0.28 },
             };
@@ -222,7 +226,7 @@ namespace NiuMa
 
             var header = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 0, 0, 8) };
             var btns = new StackPanel { Orientation = Orientation.Horizontal };
-            _eyeBtn = Ui.IconButton(((char)0xE7B3).ToString(), "老板来了：隐藏金额 (Ctrl+Alt+H)", ToggleMask);
+            _eyeBtn = Ui.IconButton(((char)0xE7B3).ToString(), "隐藏数值 (Ctrl+Alt+H)", ToggleMask);
             _pinBtn = Ui.IconButton(((char)0xE718).ToString(), "窗口置顶", () => { _s.Topmost = !_s.Topmost; ApplyVisual(_s); _s.Save(); });
             btns.Children.Add(_eyeBtn);
             btns.Children.Add(_pinBtn);
@@ -254,7 +258,7 @@ namespace NiuMa
             _countdown.Margin = new Thickness(0, 2, 0, 12);
             card.Children.Add(_countdown);
 
-            card.Children.Add(Ui.T("今日已赚", 12, Ui.Sub));
+            card.Children.Add(Ui.T("今日燃烧", 12, Ui.Sub));
             var amountHost = new Grid { Margin = new Thickness(0, 2, 0, 2), Height = 54 };
             _odo = new Odometer(Ui.Num, 40, Ui.Carrot) { VerticalAlignment = VerticalAlignment.Center };
             _mask = Ui.T("", 40, Ui.Carrot, FontWeights.Bold, Ui.Num);
@@ -288,8 +292,7 @@ namespace NiuMa
             _month = Ui.T("", 18, Ui.Blue, FontWeights.Bold, Ui.Num);
             DockPanel.SetDock(_month, Dock.Right);
             mrow.Children.Add(_month);
-            var ml = Ui.T("本月累计", 13, Ui.Ink, FontWeights.SemiBold);
-            ml.VerticalAlignment = VerticalAlignment.Center;
+            var ml = Ui.T("本月累计", 13, Ui.Ink, FontWeights.SemiBold);            ml.VerticalAlignment = VerticalAlignment.Center;
             mrow.Children.Add(ml);
             card.Children.Add(mrow);
             _monthSub = Ui.T("", 11, Ui.Gray);
@@ -351,13 +354,13 @@ namespace NiuMa
                 cm.Items.Clear();
                 cm.Items.Add(Item("设置…", OpenSettings));
                 cm.Items.Add(Item(_s.Mini ? "展开完整面板" : "切换迷你模式", ToggleMini));
-                cm.Items.Add(Item(_s.Masked ? "显示金额" : "老板来了（隐藏金额）", ToggleMask));
+                cm.Items.Add(Item(_s.Masked ? "显示数值" : "隐藏数值", ToggleMask));
                 cm.Items.Add(new MenuItem { Header = "窗口置顶", IsCheckable = true, IsChecked = _s.Topmost });
                 ((MenuItem)cm.Items[3]).Click += (a, b) => { _s.Topmost = !_s.Topmost; ApplyVisual(_s); _s.Save(); };
                 cm.Items.Add(Item("鼠标穿透（Ctrl+Alt+T 取消）", ToggleClickThrough));
                 cm.Items.Add(new Separator());
                 bool work = Engine.IsWorkDay(_s, Now());
-                cm.Items.Add(Item(work ? "今天请假/休息（不计薪）" : "今天要上班（计薪）", () =>
+                cm.Items.Add(Item(work ? "今天休息（不记录）" : "今天照常记录", () =>
                 {
                     bool normal = _s.WorkDaySet()[(int)Now().DayOfWeek];
                     bool target = !work;
@@ -406,7 +409,7 @@ namespace NiuMa
 
         public void ApplyVisual(AppSettings s)
         {
-            string name = string.IsNullOrWhiteSpace(s.AppName) ? "牛马脱敏器" : s.AppName.Trim();
+            string name = string.IsNullOrWhiteSpace(s.AppName) ? "燃脂助手" : s.AppName.Trim();
             Title = name;
             _title.Text = name;
             if (_tray != null) _tray.Text = name.Length > 60 ? name.Substring(0, 60) : name;
@@ -466,20 +469,20 @@ namespace NiuMa
             Brush color;
             switch (r.State)
             {
-                case WorkState.RestDay: st = "休息日"; color = Ui.Leaf; cd = "今天不用当牛马，好好休息。"; mini = "休息"; break;
-                case WorkState.BeforeWork: st = "还没上班"; color = Ui.Gray; cd = "距离上班还有 " + Engine.Duration(r.SecondsToNext, true); mini = "未上班"; break;
-                case WorkState.Lunch: st = "午休中"; color = Ui.Leaf; cd = "午休还剩 " + Engine.Duration(r.SecondsToNext, true) + "，暂停计薪"; mini = "午休"; break;
-                case WorkState.Working: st = "上班中"; color = Ui.Blue; cd = "距离下班还有 " + Engine.Duration(r.SecondsToNext, true); mini = Engine.Duration(r.SecondsToNext, false) + "后下班"; break;
-                case WorkState.Overtime: st = "加班中"; color = Ui.Carrot; cd = "已加班 " + Engine.Duration(r.OvertimeSeconds, true) + "，按 " + _s.OvertimeRate + " 倍计"; mini = "加班中"; break;
-                default: st = "已下班"; color = Ui.Leaf; cd = "今天的牛马已下线，快跑！"; mini = "已下班"; break;
+                case WorkState.RestDay: st = "休息日"; color = Ui.Leaf; cd = "今天休息，不燃烧。"; mini = "休息"; break;
+                case WorkState.BeforeWork: st = "未开始"; color = Ui.Gray; cd = "距开始还有 " + Engine.Duration(r.SecondsToNext, true); mini = "待开始"; break;
+                case WorkState.Lunch: st = "休息中"; color = Ui.Leaf; cd = "休息还剩 " + Engine.Duration(r.SecondsToNext, true) + "，暂停计数"; mini = "休息"; break;
+                case WorkState.Working: st = "燃烧中"; color = Ui.Blue; cd = "距结束还有 " + Engine.Duration(r.SecondsToNext, true); mini = Engine.Duration(r.SecondsToNext, false) + "后结束"; break;
+                case WorkState.Overtime: st = "加练中"; color = Ui.Carrot; cd = "已加练 " + Engine.Duration(r.OvertimeSeconds, true) + "，按 " + _s.OvertimeRate + " 倍计"; mini = "加练中"; break;
+                default: st = "已结束"; color = Ui.Leaf; cd = "今天的燃烧结束了。"; mini = "已结束"; break;
             }
             _status.Text = st; _status.Foreground = color; _countdown.Text = cd;
             _miniStatus.Text = mini; _miniDot.Background = color;
 
             int dec = Math.Max(2, Math.Min(6, _s.Decimals));
-            _speed.Text = r.Speed > 0 ? "当前赚钱速度  " + c + r.Speed.ToString("F" + dec) + " / 秒  ·  " + c + (r.Speed * 60).ToString("F2") + " / 分钟" : "当前赚钱速度  " + c + "0 / 秒（暂停计薪）";
+            _speed.Text = r.Speed > 0 ? "当前燃烧速度  " + c + r.Speed.ToString("F" + dec) + " / 秒  ·  " + c + (r.Speed * 60).ToString("F2") + " / 分钟" : "当前燃烧速度  " + c + "0 / 秒（暂停计数）";
             _wish.Text = Engine.WishText(_s, r);
-            _progressText.Text = "今日工时进度 " + (r.Progress * 100).ToString("F1") + "%";
+            _progressText.Text = "今日进度 " + (r.Progress * 100).ToString("F1") + "%";
             _hoursText.Text = (r.PaidElapsed / 3600).ToString("F2") + " / " + (r.PaidSeconds / 3600).ToString("F2") + " 小时";
             _barTrack.Visibility = r.State == WorkState.RestDay ? Visibility.Collapsed : Visibility.Visible;
 
@@ -487,17 +490,17 @@ namespace NiuMa
             double monthTotal = Engine.MonthTotal(_s, now);
             _month.Text = _s.Masked ? c + "****" : c + month.ToString("N2");
             int pd = Engine.DaysToPayDay(_s, now);
-            _monthSub.Text = "已过的工作日按满勤计，本月满勤约 " + (_s.Masked ? "****" : c + monthTotal.ToString("N0")) + "  ·  " + (pd == 0 ? "今天发工资！" : "距离发薪日还有 " + pd + " 天");
-            _hourly.Text = "时薪 " + c + r.HourlyPay.ToString("F2") + "   ·   分薪 " + c + (r.HourlyPay / 60).ToString("F3") +
-                "\n今日满勤可得 " + (_s.Masked ? "****" : c + r.DailyPay.ToString("F2")) + (_s.SalaryMode == 1 ? "（月薪 " + (_s.Masked ? "****" : c + _s.Amount.ToString("N0")) + " ÷ " + _s.MonthDays + " 天）" : "");
+            _monthSub.Text = "已过的时间按满额计，本月满额约 " + (_s.Masked ? "****" : c + monthTotal.ToString("N0")) + "  ·  " + (pd == 0 ? "今天结算！" : "距结算日还有 " + pd + " 天");
+            _hourly.Text = "每小时 " + c + r.HourlyPay.ToString("F2") + "   ·   每分钟 " + c + (r.HourlyPay / 60).ToString("F3") +
+                "\n今日目标 " + (_s.Masked ? "****" : c + r.DailyPay.ToString("F2")) + (_s.SalaryMode == 1 ? "（月目标 " + (_s.Masked ? "****" : c + _s.Amount.ToString("N0")) + " ÷ " + _s.MonthDays + " 天）" : "");
             UpdateQuote(false);
 
             if (_lastState.HasValue && _lastState != r.State && _s.OffWorkNotify)
             {
                 if (r.State == WorkState.AfterWork || (r.State == WorkState.Overtime && _lastState == WorkState.Working))
-                    Notify("下班啦！", "今天赚到 " + c + r.Earned.ToString("F2") + "，牛马可以下线了。");
+                    Notify("今日结束", "今天燃烧了 " + c + r.Earned.ToString("F2") + "。");
                 else if (r.State == WorkState.Working && _lastState == WorkState.BeforeWork)
-                    Notify("开始计薪", "新的一天，钱开始到账了。");
+                    Notify("开始燃烧", "新的一天，数字开始动了。");
             }
             _lastState = r.State;
             if (_s.Masked) { _mask.Text = c + " ****.**"; _miniMask.Text = _mask.Text; }
@@ -586,8 +589,8 @@ namespace NiuMa
             var r = Engine.Compute(_s, now);
             string c = _s.Currency;
             string txt = "【" + _title.Text + " · 今日战报】" + now.ToString("yyyy-MM-dd") + "\n" +
-                "状态：" + _status.Text + "\n今日已赚：" + c + r.Earned.ToString("F2") + " / " + c + r.DailyPay.ToString("F2") +
-                "（进度 " + (r.Progress * 100).ToString("F1") + "%）\n" + "时薪：" + c + r.HourlyPay.ToString("F2") + "\n" + _wish.Text;
+                "状态：" + _status.Text + "\n今日燃烧：" + c + r.Earned.ToString("F2") + " / " + c + r.DailyPay.ToString("F2") +
+                "（进度 " + (r.Progress * 100).ToString("F1") + "%）\n" + "每小时：" + c + r.HourlyPay.ToString("F2") + "\n" + _wish.Text;
             try { Clipboard.SetText(txt); Notify("战报已复制", "可以直接粘贴给同事了。"); } catch { }
         }
 

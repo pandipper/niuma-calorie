@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -134,23 +134,23 @@ namespace NiuMa
             _name = Box(_s.AppName);
             Row("软件名称", _name, "显示在窗口标题、托盘和战报里");
 
-            Section("薪资");
+            Section("目标");
             _mode = new ComboBox { Width = 90, SelectedIndex = _s.SalaryMode };
-            _mode.Items.Add("日薪"); _mode.Items.Add("月薪");
+            _mode.Items.Add("每日"); _mode.Items.Add("每月");
             _mode.SelectionChanged += (o, e) => Changed();
             _amount = Box(D(_s.Amount), 110);
-            _currency = Box(_s.Currency, 40);
-            Row("薪资", H(_mode, L(""), _amount, L("货币符号"), _currency));
+            _currency = Box(_s.Currency, 70);
+            Row("目标", H(_mode, L(""), _amount, L("单位"), _currency));
             _monthDays = Box(D(_s.MonthDays), 70);
-            Row("月计薪天数", H(_monthDays, L("天")), "月薪模式下：日薪 = 月薪 ÷ 计薪天数（法定 21.75）");
+            Row("月周期天数", H(_monthDays, L("天")), "按月模式下：每日 = 每月 ÷ 天数（常用 21.75）");
             _preview = Ui.T("", 12, Ui.Blue);
             Row("换算", _preview);
 
-            Section("上班时间");
+            Section("时间");
             _start = Box(_s.StartTime, 70);
             _end = Box(_s.EndTime, 70);
-            Row("上下班", H(_start, L("至"), _end), "24 小时制，例如 10:00 / 19:00");
-            _lunch = Check("扣除午休（午休不计薪）", _s.LunchEnabled);
+            Row("起止", H(_start, L("至"), _end), "24 小时制，例如 10:00 / 19:00");
+            _lunch = Check("扣除休息（休息不计数）", _s.LunchEnabled);
             _lunchS = Box(_s.LunchStart, 70);
             _lunchE = Box(_s.LunchEnd, 70);
             var lunchRow = new StackPanel();
@@ -158,7 +158,7 @@ namespace NiuMa
             var lr = H(_lunchS, L("至"), _lunchE);
             lr.Margin = new Thickness(0, 4, 0, 0);
             lunchRow.Children.Add(lr);
-            Row("午休", lunchRow);
+            Row("休息", lunchRow);
             var days = new WrapPanel();
             string[] names = { "日", "一", "二", "三", "四", "五", "六" };
             var set = _s.WorkDaySet();
@@ -169,12 +169,12 @@ namespace NiuMa
                 _days[d].Margin = new Thickness(0, 2, 10, 2);
                 days.Children.Add(_days[d]);
             }
-            Row("工作日", days, "单次调休可在主窗口右键 → 今天请假 / 今天要上班");
-            _overtime = Check("下班后继续计薪（加班）", _s.Overtime);
+            Row("记录日", days, "单日调整可在主窗口右键 → 今天休息 / 今天照常记录");
+            _overtime = Check("结束后继续计数（加练）", _s.Overtime);
             _otRate = Box(D(_s.OvertimeRate), 50);
-            Row("加班", H(_overtime, L("倍率"), _otRate));
+            Row("加练", H(_overtime, L("倍率"), _otRate));
             _payDay = Box(_s.PayDay.ToString(), 50);
-            Row("发薪日", H(L("每月"), _payDay, L("号")));
+            Row("结算日", H(L("每月"), _payDay, L("号")));
 
             Section("显示");
             _decimals = new ComboBox { Width = 70 };
@@ -212,11 +212,11 @@ namespace NiuMa
             var bgRow = new DockPanel();
             DockPanel.SetDock(reset, Dock.Right); DockPanel.SetDock(pick, Dock.Right);
             bgRow.Children.Add(reset); bgRow.Children.Add(pick); bgRow.Children.Add(_bgPath);
-            Row("背景图片", bgRow, "留空使用默认的 beij.png");
+            Row("背景图片", bgRow, "留空则不显示背景图（纯色渐变底）；默认不带任何图片");
 
             Section("其他");
             _topmost = Check("窗口始终置顶", _s.Topmost);
-            _notify = Check("上下班时托盘提醒", _s.OffWorkNotify);
+            _notify = Check("开始 / 结束时托盘提醒", _s.OffWorkNotify);
             _autostart = Check("开机自动启动", IsAutoStart());
             var others = new WrapPanel();
             others.Children.Add(_topmost); others.Children.Add(_notify); others.Children.Add(_autostart);
@@ -224,12 +224,12 @@ namespace NiuMa
             _wish = Box(_s.Wishlist);
             _wish.AcceptsReturn = true; _wish.Height = 110; _wish.TextWrapping = TextWrapping.NoWrap;
             _wish.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-            Row("心愿单", _wish, "每行一个：名称=价格，用来提示「再过多久就能买到」");
+            Row("兑换清单", _wish, "每行一个：名称=数值，用来提示「再过多久就能消耗掉」");
             _quotes = Box(_s.Quotes);
             _quotes.AcceptsReturn = true; _quotes.Height = 110; _quotes.TextWrapping = TextWrapping.Wrap;
             _quotes.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-            Row("鼓励语录", _quotes, "每行一句，每 10 分钟轮换，点击语录可手动换");
-            var keys = Ui.T("Ctrl+Alt+M 显示/隐藏    Ctrl+Alt+H 隐藏金额    Ctrl+Alt+T 鼠标穿透\n双击窗口切换迷你模式，拖动窗口靠近屏幕边缘会自动吸附", 12, Ui.Gray);
+            Row("励志语录", _quotes, "每行一句，每 10 分钟轮换，点击语录可手动换");
+            var keys = Ui.T("Ctrl+Alt+M 显示/隐藏    Ctrl+Alt+H 隐藏数值    Ctrl+Alt+T 鼠标穿透\n双击窗口切换迷你模式，拖动窗口靠近屏幕边缘会自动吸附", 12, Ui.Gray);
             Row("快捷键", keys);
 
             var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = _grid };
@@ -265,35 +265,35 @@ namespace NiuMa
         {
             double v;
             TimeSpan ts, te;
-            t.AppName = _name.Text.Trim().Length == 0 ? "牛马脱敏器" : _name.Text.Trim();
+            t.AppName = _name.Text.Trim().Length == 0 ? "燃脂助手" : _name.Text.Trim();
             t.SalaryMode = _mode.SelectedIndex < 0 ? 0 : _mode.SelectedIndex;
-            if (!Num(_amount, out v) || v < 0 || v > 1e9) return "薪资金额不正确";
+            if (!Num(_amount, out v) || v < 0 || v > 1e9) return "目标数值不正确";
             t.Amount = v;
-            if (!Num(_monthDays, out v) || v <= 0 || v > 31) return "月计薪天数应在 1~31 之间";
+            if (!Num(_monthDays, out v) || v <= 0 || v > 31) return "月周期天数应在 1~31 之间";
             t.MonthDays = v;
             t.Currency = _currency.Text.Trim();
-            if (!AppSettings.TryParseTime(_start.Text, out ts) || !AppSettings.TryParseTime(_end.Text, out te)) return "上下班时间格式应为 HH:mm";
-            if (te <= ts) return "下班时间要晚于上班时间";
+            if (!AppSettings.TryParseTime(_start.Text, out ts) || !AppSettings.TryParseTime(_end.Text, out te)) return "起止时间格式应为 HH:mm";
+            if (te <= ts) return "结束时间要晚于开始时间";
             t.StartTime = ts.ToString(@"hh\:mm"); t.EndTime = te.ToString(@"hh\:mm");
             t.LunchEnabled = _lunch.IsChecked == true;
             TimeSpan ls, le;
             if (!AppSettings.TryParseTime(_lunchS.Text, out ls) || !AppSettings.TryParseTime(_lunchE.Text, out le))
             {
-                if (t.LunchEnabled) return "午休时间格式应为 HH:mm";
+                if (t.LunchEnabled) return "休息时段格式应为 HH:mm";
             }
             else
             {
-                if (t.LunchEnabled && (le <= ls || ls < ts || le > te)) return "午休时间需在上班时段内，且结束晚于开始";
+                if (t.LunchEnabled && (le <= ls || ls < ts || le > te)) return "休息时段需在起止时间内，且结束晚于开始";
                 t.LunchStart = ls.ToString(@"hh\:mm"); t.LunchEnd = le.ToString(@"hh\:mm");
             }
             var days = new System.Collections.Generic.List<string>();
             for (int i = 0; i < 7; i++) if (_days[i].IsChecked == true) days.Add(i.ToString());
             t.WorkDays = string.Join(",", days);
             t.Overtime = _overtime.IsChecked == true;
-            if (!Num(_otRate, out v) || v < 0 || v > 10) return "加班倍率应在 0~10 之间";
+            if (!Num(_otRate, out v) || v < 0 || v > 10) return "加练倍率应在 0~10 之间";
             t.OvertimeRate = v;
             int pd;
-            if (!int.TryParse(_payDay.Text.Trim(), out pd) || pd < 1 || pd > 31) return "发薪日应在 1~31 之间";
+            if (!int.TryParse(_payDay.Text.Trim(), out pd) || pd < 1 || pd > 31) return "结算日应在 1~31 之间";
             t.PayDay = pd;
             t.Decimals = _decimals.SelectedIndex + 2;
             t.Odometer = _odometer.IsChecked == true;
@@ -334,7 +334,7 @@ namespace NiuMa
             double daily = tmp.DailyPay();
             double sec = Engine.PaidSecondsPerDay(tmp);
             double hourly = sec > 0 ? daily / sec * 3600 : 0;
-            _preview.Text = "日薪 " + tmp.Currency + daily.ToString("F2") + "  ·  每天计薪 " + (sec / 3600).ToString("0.##") + " 小时  ·  时薪 " + tmp.Currency + hourly.ToString("F2") +
+            _preview.Text = "每日 " + tmp.Currency + daily.ToString("F2") + "  ·  每天 " + (sec / 3600).ToString("0.##") + " 小时  ·  每小时 " + tmp.Currency + hourly.ToString("F2") +
                 "\n每秒 " + tmp.Currency + (sec > 0 ? daily / sec : 0).ToString("F6");
         }
 

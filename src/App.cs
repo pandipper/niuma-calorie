@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -11,8 +11,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 [assembly: TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]
-[assembly: AssemblyTitle("牛马脱敏器")]
-[assembly: AssemblyProduct("牛马脱敏器")]
+[assembly: AssemblyTitle("燃脂助手")]
+[assembly: AssemblyProduct("燃脂助手")]
 [assembly: AssemblyVersion("1.0.0.0")]
 
 namespace NiuMa
@@ -104,21 +104,17 @@ namespace NiuMa
             return Assembly.GetExecutingAssembly().GetManifestResourceStream("NiuMa." + name);
         }
 
+        // 只有用户自己指定了图片才加载；不再有内置的默认背景图
         public static BitmapSource LoadBackground(string path)
         {
             try
             {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
                 var bi = new BitmapImage();
                 bi.BeginInit();
                 bi.CacheOption = BitmapCacheOption.OnLoad;
                 bi.DecodePixelWidth = 900;
-                if (!string.IsNullOrEmpty(path) && File.Exists(path)) bi.UriSource = new Uri(path);
-                else
-                {
-                    string local = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "beij.png");
-                    if (File.Exists(local)) bi.UriSource = new Uri(local);
-                    else bi.StreamSource = Res("beij.png");
-                }
+                bi.UriSource = new Uri(path);
                 bi.EndInit();
                 bi.Freeze();
                 return bi;

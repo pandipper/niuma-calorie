@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace NiuMa
@@ -8,14 +8,14 @@ namespace NiuMa
     public class Snapshot
     {
         public WorkState State;
-        public double Earned;          // 今日已赚
-        public double Speed;           // 元/秒
+        public double Earned;          // 今日已累计
+        public double Speed;           // 每秒累计
         public double DailyPay;
         public double HourlyPay;
-        public double PaidSeconds;     // 今日应计薪秒数
-        public double PaidElapsed;     // 今日已计薪秒数
+        public double PaidSeconds;     // 今日计时段秒数
+        public double PaidElapsed;     // 今日已计时秒数
         public double OvertimeSeconds;
-        public double SecondsToNext;   // 距离下一个节点（上班/下班/午休结束）
+        public double SecondsToNext;   // 距离下一个节点（开始/结束/休息结束）
         public double Progress;        // 0..1
     }
 
@@ -114,7 +114,7 @@ namespace NiuMa
             return r;
         }
 
-        // 剩余计薪秒数（用于心愿单预估）
+        // 剩余秒数（用于兑换预估）
         public static double PaidRemaining(Snapshot r) { return Math.Max(0, r.PaidSeconds - r.PaidElapsed); }
 
         public static double MonthEarned(AppSettings s, DateTime now, double todayEarned)
@@ -180,9 +180,9 @@ namespace NiuMa
             switch (r.State)
             {
                 case WorkState.RestDay:
-                    return "休息日，花钱的事交给明天的自己。";
+                    return "休息日，今天不烧。";
                 case WorkState.BeforeWork:
-                    return bestOfDay != null ? "今天搬完砖，能换" + bestOfDay + "。" : "今天也是为梦想窝囊的一天。";
+                    return bestOfDay != null ? "今天的额度，够" + bestOfDay + "。" : "还没开始，数字在等你。";
                 case WorkState.Working:
                 case WorkState.Lunch:
                 case WorkState.Overtime:
@@ -190,13 +190,13 @@ namespace NiuMa
                     {
                         double need = (nextPrice - r.Earned) / r.Speed;
                         if (r.State == WorkState.Overtime || need <= PaidRemaining(r))
-                            return "再过 " + Duration(need, false) + "，" + next + "就赚回来了。";
+                            return "再过 " + Duration(need, false) + "，" + next + "就烧掉了。";
                     }
-                    if (best != null) return "今天已经赚到" + best + "了，稳住。";
-                    if (next != null) return "离" + next + "还差 " + s.Currency + (nextPrice - r.Earned).ToString("0.00") + "。";
+                    if (best != null) return "今天已经烧掉" + best + "了，稳住。";
+                    if (next != null) return "距" + next + "还差 " + s.Currency + (nextPrice - r.Earned).ToString("0.00") + "。";
                     return "";
                 default:
-                    return best != null ? "今天赚到了" + best + "，收工！" : "今天收工，辛苦了。";
+                    return best != null ? "今天烧掉了" + best + "，收工。" : "今天收工。";
             }
         }
     }

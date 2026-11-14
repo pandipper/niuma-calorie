@@ -20,7 +20,7 @@ namespace NiuMa
         FontFamily _font;
         Brush _brush;
         bool _rolling = true;
-        string _currency = "¥";
+        string _currency = "卡路里";
 
         public Odometer(FontFamily font, double fontSize, Brush brush)
         {
