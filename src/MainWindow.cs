@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 
@@ -13,7 +14,7 @@ namespace NiuMa
     public partial class MainWindow : Window
     {
         AppSettings _s;
-        Border _root, _panel, _barFill, _mini, _miniDot;
+        Border _root, _panel, _barFill, _mini, _miniDot, _handle;
         Grid _barTrack;
         Border _bg;
         ImageBrush _bgBrush;
@@ -34,6 +35,17 @@ namespace NiuMa
         SettingsWindow _settingsWin;
         bool _exiting;
         Snapshot _snap;
+
+        // 贴边收纳（吸附隐藏）
+        public enum DockSide { None = 0, Left = 1, Right = 2 }
+        DockSide _dock = DockSide.None;
+        bool _collapsed;
+        bool _dragging;
+        DateTime _awayAt = DateTime.MinValue;
+        DispatcherTimer _hover;
+        const double HideStrip = 8;     // 收起后露在屏幕上的宽度
+        const double ShowZone = 8;      // 边缘感应带宽度
+        const double HideDelay = 0.5;   // 鼠标离开多久后收起
 
         public MainWindow(AppSettings s)
         {
@@ -62,6 +74,10 @@ namespace NiuMa
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (o, e) => Tick(true);
             _timer.Start();
+            // 贴边收纳靠光标位置判断，不依赖窗口命中测试（收起时窗口大半在屏幕外）
+            _hover = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+            _hover.Tick += (o, e) => HoverTick();
+            _hover.Start();
             Closing += (o, e) => { if (!_exiting) { e.Cancel = true; HideToTray(); } };
         }
 
@@ -120,12 +136,126 @@ namespace NiuMa
                 Left = wa.Right - ActualWidth - 24;
                 Top = wa.Top + 24;
             }
+            // 上次是贴在边上的，按展开状态归位
+            _dock = (DockSide)Math.Max(0, Math.Min(2, _s.DockSide));
+            if (_dock != DockSide.None) Left = ExpandedLeft(_dock, wa);
         }
 
         void SavePosition()
         {
-            _s.Left = Left; _s.Top = Top;
+            // 收起状态下 Left 是"藏起来"的值，要还原成展开时的位置再存
+            _s.Left = (_collapsed && _dock != DockSide.None) ? ExpandedLeft(_dock, CurrentWorkArea()) : Left;
+            _s.Top = Top;
+            _s.DockSide = (int)_dock;
             _s.Save();
+        }
+
+        // ---------- 贴边收纳 ----------
+
+        double InsetX { get { return _root.Margin.Left * _scale.ScaleX; } }
+        double InsetY { get { return _root.Margin.Top * _scale.ScaleY; } }
+
+        // 展开时窗口左边界：卡片边缘正好贴住屏幕边
+        double ExpandedLeft(DockSide side, Rect wa)
+        {
+            return side == DockSide.Right ? wa.Right - ActualWidth + InsetX : wa.Left - InsetX;
+        }
+
+        // 收起时窗口左边界：只留 HideStrip 一窄条在屏幕上
+        double CollapsedLeft(DockSide side, Rect wa)
+        {
+            // 左边贴边：卡片右缘留在屏幕内 8px；右边贴边：卡片左缘留在屏幕内 8px
+            return side == DockSide.Right
+                ? wa.Right - HideStrip - InsetX
+                : HideStrip - ActualWidth + InsetX;
+        }
+
+        void SlideTo(double target, bool animate)
+        {
+            if (double.IsNaN(target)) return;
+            BeginAnimation(LeftProperty, null);
+            if (!animate || !IsLoaded || Math.Abs(Left - target) < 0.5) { Left = target; return; }
+            var anim = new DoubleAnimation(Left, target, TimeSpan.FromMilliseconds(130))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            };
+            anim.Completed += (o, e) => { BeginAnimation(LeftProperty, null); Left = target; };
+            BeginAnimation(LeftProperty, anim);
+        }
+
+        void Collapse(bool animate)
+        {
+            if (_dock == DockSide.None || _collapsed || !_s.AutoHide) return;
+            _collapsed = true;
+            _awayAt = DateTime.MinValue;
+            UpdateHandle();
+            SlideTo(CollapsedLeft(_dock, CurrentWorkArea()), animate);
+        }
+
+        void Expand(bool animate)
+        {
+            if (!_collapsed) return;
+            _collapsed = false;
+            _awayAt = DateTime.MinValue;
+            UpdateHandle();
+            SlideTo(ExpandedLeft(_dock, CurrentWorkArea()), animate);
+        }
+
+        // 收起时那条小竖条：贴在露出来那一窄条靠屏幕边的一侧
+        // 注意要用对齐 + 小边距定位，不能用绝对坐标——否则会把卡片撑大
+        void UpdateHandle()
+        {
+            if (_handle == null) return;
+            bool show = _collapsed && _dock != DockSide.None;
+            _handle.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            if (!show) return;
+            if (_dock == DockSide.Right)
+            {
+                _handle.HorizontalAlignment = HorizontalAlignment.Left;
+                _handle.Margin = new Thickness(1.5, 0, 0, 0);
+            }
+            else
+            {
+                _handle.HorizontalAlignment = HorizontalAlignment.Right;
+                _handle.Margin = new Thickness(0, 0, 3.5, 0);
+            }
+        }
+
+        Point? CursorDip()
+        {
+            var src = PresentationSource.FromVisual(this);
+            if (src == null || src.CompositionTarget == null) return null;
+            var p = Forms.Cursor.Position;
+            return src.CompositionTarget.TransformFromDevice.Transform(new Point(p.X, p.Y));
+        }
+
+        void HoverTick()
+        {
+            if (_dock == DockSide.None || !IsVisible || _dragging)
+            {
+                _awayAt = DateTime.MinValue;
+                return;
+            }
+            var c = CursorDip();
+            if (!c.HasValue) return;
+            var p = c.Value;
+            var wa = CurrentWorkArea();
+            double left = _collapsed ? CollapsedLeft(_dock, wa) : Left;
+            double cardL = left + InsetX, cardR = cardL + ActualWidth - InsetX * 2;
+            double cardT = Top + InsetY, cardB = cardT + ActualHeight - InsetY * 2;
+            bool inSpan = p.Y >= cardT - 2 && p.Y <= cardB + 2;
+            bool inCard = inSpan && p.X >= cardL && p.X <= cardR;
+            double edge = _dock == DockSide.Left ? wa.Left : wa.Right;
+            bool nearEdge = inSpan && Math.Abs(p.X - edge) <= ShowZone;
+
+            if (_collapsed)
+            {
+                if (nearEdge) Expand(true);
+                return;
+            }
+            if (inCard) { _awayAt = DateTime.MinValue; return; }
+            if (_awayAt == DateTime.MinValue) _awayAt = Now();
+            else if ((Now() - _awayAt).TotalSeconds >= HideDelay) Collapse(true);
         }
 
         // 窗口所在显示器的工作区（WPF 设备无关单位），多屏、不同 DPI 都按当前屏计算
@@ -172,6 +302,7 @@ namespace NiuMa
 
         void KeepOnScreen()
         {
+            if (_collapsed) return;   // 收起时窗口大半在屏幕外，别把它拽回来
             var wa = CurrentWorkArea();
             // 同样按可见卡片边缘对齐，允许窗口矩形跑到屏幕外（那圈只是透明边距）
             double dx = _root.Margin.Left * _scale.ScaleX;
@@ -209,14 +340,25 @@ namespace NiuMa
             content.Children.Add(BuildFull());
             content.Children.Add(BuildMini());
             layers.Children.Add(content);
+            // 收起后露在屏幕上的那条窄边太不显眼，加一个小竖条提示"这里能拉出来"
+            _handle = new Border
+            {
+                Width = 3.5, Height = 56, CornerRadius = new CornerRadius(2),
+                Background = Ui.Carrot, Opacity = 0.9,
+                IsHitTestVisible = false, Visibility = Visibility.Collapsed,
+            };
+            layers.Children.Add(_handle);
             _root.Child = layers;
             _root.LayoutTransform = _scale;
             Content = _root;
 
             _root.MouseLeftButtonDown += (o, e) =>
             {
+                if (_collapsed) { Expand(true); e.Handled = true; return; }
                 if (e.ClickCount == 2) { ToggleMini(); return; }
+                _dragging = true;
                 try { DragMove(); } catch { }
+                _dragging = false;
                 SnapToEdges();
                 SavePosition();
             };
@@ -402,6 +544,8 @@ namespace NiuMa
             _bg.Background = _bgBrush;
             _odo.Configure(_s.Currency, _s.Odometer);
             _miniOdo.Configure(_s.Currency, _s.Odometer);
+            // 关掉贴边收纳时，如果正收起着就展开
+            if (!_s.AutoHide) Expand(false);
             ApplyVisual(_s);
             if (IsLoaded) Native.SetExStyle(this, Native.WS_EX_TRANSPARENT, _s.ClickThrough);
             _lastState = null;
@@ -428,6 +572,7 @@ namespace NiuMa
             _root.CornerRadius = new CornerRadius(s.Mini ? 15 : 16);
             ApplyMask();
             ApplyScale();
+            UpdateHandle();
         }
 
         void ApplyMask()
@@ -546,17 +691,30 @@ namespace NiuMa
             // 别让卡片掉到任务栏底下（拖到工作区外一点时好歹还在屏幕里）
             if (Left + dx > wa.Right - 80) Left = wa.Right - 80 - dx;
             if (Top + dy > wa.Bottom - 40) Top = wa.Bottom - 40 - dy;
+            // 拖过头时把卡片整体拉回屏幕内，别把它扔到屏幕外面找不回来
+            KeepOnScreen();
+            wa = CurrentWorkArea();
+
+            // 判断贴在哪一边，交给贴边收纳
+            DockSide side = DockSide.None;
+            if (Math.Abs(Left + dx - wa.Left) < 0.5) side = DockSide.Left;
+            else if (Math.Abs(Left + ActualWidth - dx - wa.Right) < 0.5) side = DockSide.Right;
+            _dock = side;
+            _collapsed = false;
+            _awayAt = DateTime.MinValue;
         }
 
         void ToggleMini()
         {
+            if (_collapsed) Expand(false);
             double right = Left + ActualWidth;
             _s.Mini = !_s.Mini;
             ApplyVisual(_s);
             Tick(true);
             UpdateLayout();
-            // 窗口贴在右侧时，以右边缘为锚点收放
-            if (right >= CurrentWorkArea().Right - 30) Left = right - ActualWidth;
+            // 贴在边上时始终贴着自己那条边收放
+            if (_dock != DockSide.None) Left = ExpandedLeft(_dock, CurrentWorkArea());
+            else if (right >= CurrentWorkArea().Right - 30) Left = right - ActualWidth;
             KeepOnScreen();
             SavePosition();
         }

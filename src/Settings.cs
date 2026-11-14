@@ -27,6 +27,8 @@ namespace NiuMa
         public double UiZoom = 1.0;         // 在「按屏幕自动」的基础上再放大/缩小
         public bool Topmost = true;
         public bool ClickThrough = false;
+        public bool AutoHide = true;        // 贴到屏幕左右边缘后自动收纳
+        public int DockSide = 0;            // 0 未贴边, 1 贴左, 2 贴右
         public bool Mini = false;
         public bool Masked = false;
         public bool Odometer = true;

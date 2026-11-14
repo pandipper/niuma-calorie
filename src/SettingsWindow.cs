@@ -16,7 +16,7 @@ namespace NiuMa
         readonly MainWindow _main;
         TextBox _name, _amount, _monthDays, _start, _end, _lunchS, _lunchE, _currency, _otRate, _payDay, _wish, _quotes, _bgPath;
         ComboBox _mode, _decimals;
-        CheckBox _lunch, _topmost, _odometer, _overtime, _notify, _autostart;
+        CheckBox _lunch, _topmost, _odometer, _overtime, _notify, _autostart, _autoHide;
         CheckBox[] _days = new CheckBox[7];
         Slider _bgOp, _panelOp, _winOp, _scale;
         TextBlock _error, _preview;
@@ -184,6 +184,8 @@ namespace NiuMa
             Row("小数位数", H(_decimals, L("位")));
             _odometer = Check("滚轮翻牌效果（关闭则为普通数字）", _s.Odometer);
             Row("数字样式", _odometer);
+            _autoHide = Check("贴边后自动收纳（鼠标移回边缘再展开）", _s.AutoHide);
+            Row("贴边收纳", _autoHide, "拖到屏幕左/右边缘松手即贴边，鼠标移开后自动收起，只留一条窄边");
             var p1 = new StackPanel { Orientation = Orientation.Horizontal };
             _bgOp = MakeSlider(0, 1, _s.BgOpacity, "P0", p1);
             Row("背景图透明度", p1);
@@ -303,6 +305,7 @@ namespace NiuMa
             t.UiZoom = Math.Round(_scale.Value, 2);
             t.BgPath = _bgPath.Text.Trim();
             t.Topmost = _topmost.IsChecked == true;
+            t.AutoHide = _autoHide.IsChecked == true;
             t.OffWorkNotify = _notify.IsChecked == true;
             t.Wishlist = _wish.Text.Replace("\r", "");
             t.Quotes = _quotes.Text.Replace("\r", "");
@@ -363,6 +366,7 @@ namespace NiuMa
             for (int i = 0; i < 7; i++) _days[i].IsChecked = set[i];
             _overtime.IsChecked = d.Overtime; _otRate.Text = D(d.OvertimeRate); _payDay.Text = d.PayDay.ToString();
             _decimals.SelectedIndex = d.Decimals - 2; _odometer.IsChecked = d.Odometer;
+            _autoHide.IsChecked = d.AutoHide;
             _bgOp.Value = d.BgOpacity; _panelOp.Value = d.PanelOpacity; _winOp.Value = d.WindowOpacity; _scale.Value = d.UiZoom;
             _bgPath.Text = d.BgPath; _topmost.IsChecked = d.Topmost; _notify.IsChecked = d.OffWorkNotify;
             _wish.Text = d.Wishlist; _quotes.Text = d.Quotes;

@@ -13,7 +13,8 @@ using System.Windows.Media.Imaging;
 [assembly: TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]
 [assembly: AssemblyTitle("燃脂助手")]
 [assembly: AssemblyProduct("燃脂助手")]
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyFileVersion("1.0.1.0")]
 
 namespace NiuMa
 {
