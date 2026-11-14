@@ -173,10 +173,13 @@ namespace NiuMa
         void KeepOnScreen()
         {
             var wa = CurrentWorkArea();
-            if (Left + ActualWidth > wa.Right) Left = Math.Max(wa.Left, wa.Right - ActualWidth);
-            if (Top + ActualHeight > wa.Bottom) Top = Math.Max(wa.Top, wa.Bottom - ActualHeight);
-            if (Left < wa.Left) Left = wa.Left;
-            if (Top < wa.Top) Top = wa.Top;
+            // 同样按可见卡片边缘对齐，允许窗口矩形跑到屏幕外（那圈只是透明边距）
+            double dx = _root.Margin.Left * _scale.ScaleX;
+            double dy = _root.Margin.Top * _scale.ScaleY;
+            if (Left + ActualWidth - dx > wa.Right) Left = wa.Right - ActualWidth + dx;
+            if (Top + ActualHeight - dy > wa.Bottom) Top = wa.Bottom - ActualHeight + dy;
+            if (Left + dx < wa.Left) Left = wa.Left - dx;
+            if (Top + dy < wa.Top) Top = wa.Top - dy;
         }
         static readonly Thickness RowGap = new Thickness(0, 0, 0, 6);
 
@@ -530,11 +533,19 @@ namespace NiuMa
             // 拖到另一块屏幕后按那块屏重新计算大小
             ApplyScale();
             var wa = CurrentWorkArea();
-            const double d = 18;
-            if (Math.Abs(Left - wa.Left) < d) Left = wa.Left;
-            if (Math.Abs(Top - wa.Top) < d) Top = wa.Top;
-            if (Math.Abs(Left + ActualWidth - wa.Right) < d) Left = wa.Right - ActualWidth;
-            if (Math.Abs(Top + ActualHeight - wa.Bottom) < d) Top = wa.Bottom - ActualHeight;
+            // 窗口四周有 12px 透明边距（留给投影），吸附必须按「看得见的卡片边缘」来算，
+            // 否则要么宽容度只剩 6px 很难吸上，要么吸上去还留一条缝
+            double dx = _root.Margin.Left * _scale.ScaleX;
+            double dy = _root.Margin.Top * _scale.ScaleY;
+            const double d = 24;
+            if (Math.Abs(Left + dx - wa.Left) < d) Left = wa.Left - dx;
+            if (Math.Abs(Top + dy - wa.Top) < d) Top = wa.Top - dy;
+            if (Math.Abs(Left + ActualWidth - dx - wa.Right) < d) Left = wa.Right - ActualWidth + dx;
+            if (Math.Abs(Top + ActualHeight - dy - wa.Bottom) < d) Top = wa.Bottom - ActualHeight + dy;
+
+            // 别让卡片掉到任务栏底下（拖到工作区外一点时好歹还在屏幕里）
+            if (Left + dx > wa.Right - 80) Left = wa.Right - 80 - dx;
+            if (Top + dy > wa.Bottom - 40) Top = wa.Bottom - 40 - dy;
         }
 
         void ToggleMini()
