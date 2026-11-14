@@ -31,7 +31,7 @@
 
 ## 下载使用
 
-到 [Releases](../../releases) 页面下载 `燃脂助手.exe`，双击运行即可，无需安装。
+到 [Releases](../../releases) 页面下载 `niuma-calorie-v1.0.0.exe`（就是本程序，运行后窗口里显示为「燃脂助手」），双击即可，无需安装。
 
 系统要求：Windows 10 / 11（自带 .NET Framework 4.8）。
 
